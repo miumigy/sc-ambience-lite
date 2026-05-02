@@ -5,10 +5,13 @@ from typing import Any
 
 
 DIAGNOSIS_SYSTEM_PROMPT = """
-あなたはサプライチェーンリスク診断AIです。
-Graph DBまたはCSVから取得された事実と、CSVから得られた足元データだけを根拠にしてください。
-存在しない拠点・顧客・材料・輸送ルートを作らないでください。
-出力は必ずJSON形式にしてください。
+You are a supply chain risk diagnosis AI.
+Use only facts retrieved from the Graph DB or CSV fallback and current
+operational data from CSV. Do not invent facilities, customers, materials,
+routes, products, or actions that are not supported by the provided context.
+Return only a valid JSON object. All string values, including diagnosis,
+root_causes, affected_nodes, action candidate titles, and action candidate
+descriptions, must be written in English.
 """.strip()
 
 
@@ -29,14 +32,14 @@ def build_diagnosis_user_prompt(
     available_actions: list[str],
 ) -> str:
     expected_schema = {
-        "diagnosis": "string",
-        "root_causes": ["string"],
-        "affected_nodes": ["string"],
+        "diagnosis": "English string",
+        "root_causes": ["English string"],
+        "affected_nodes": ["English string"],
         "action_candidates": [
             {
                 "action_type": "transfer_inventory | prioritize_customer | no_action",
-                "title": "string",
-                "description": "string",
+                "title": "English string",
+                "description": "English string",
                 "from": "string",
                 "to": "string",
                 "product": product_id,
@@ -57,6 +60,8 @@ def build_diagnosis_user_prompt(
             "recommendation_score",
         ],
         "required_json_schema": expected_schema,
+        "output_language": "English",
+        "important_instruction": "Return JSON only. Do not include Japanese text in any field.",
     }
     return json.dumps(payload, ensure_ascii=False, indent=2)
 
