@@ -1,5 +1,6 @@
 source,target,relationship,description
 S1,M1,SUPPLIES,S1 supplies M1
+S2,M1B,SUPPLIES,S2 supplies M1B
 S2,M2,SUPPLIES,S2 supplies M2
 S3,M2B,SUPPLIES,S3 supplies M2B
 S3,M3,SUPPLIES,S3 supplies M3
