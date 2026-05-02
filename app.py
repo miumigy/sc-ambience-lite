@@ -15,6 +15,15 @@ from src.visualizer import render_network, render_subgraph
 
 
 AVAILABLE_ACTIONS = ["transfer_inventory", "prioritize_customer", "no_action"]
+TAB_LABELS = [
+    "Supply Chain Map",
+    "Data",
+    "Risk Detection",
+    "Graph Context",
+    "AI Diagnosis",
+    "Simulation",
+    "Recommendation",
+]
 
 
 st.set_page_config(page_title="Supply Chain Ambience Lite", layout="wide")
@@ -28,6 +37,11 @@ def cached_data() -> dict[str, pd.DataFrame]:
 def get_neo4j_client():
     config = load_config()
     return Neo4jClient(config.neo4j_uri, config.neo4j_username, config.neo4j_password, config.neo4j_database)
+
+
+def activate_tab(tab_name: str) -> None:
+    if tab_name in TAB_LABELS:
+        st.session_state["active_tab"] = tab_name
 
 
 def get_graph_context(product_id: str, dataframes: dict[str, pd.DataFrame]) -> tuple[list[str], str]:
@@ -89,8 +103,10 @@ with st.sidebar:
                 st.success("Neo4j connection verified.")
             finally:
                 client.close()
+            activate_tab("Graph Context")
         except Exception as exc:
             st.error(f"Neo4j connection failed: {exc}")
+            activate_tab("Graph Context")
 
     if st.button("Seed sample data to Neo4j"):
         try:
@@ -100,8 +116,10 @@ with st.sidebar:
                 st.success("Sample graph data seeded to Neo4j.")
             finally:
                 client.close()
+            activate_tab("Supply Chain Map")
         except Exception as exc:
             st.error(f"Neo4j seed failed: {exc}")
+            activate_tab("Supply Chain Map")
 
 risk_df, risk_summary = detect_risks(product_id, dataframes)
 graph_context, graph_context_source = get_graph_context(product_id, dataframes)
@@ -109,30 +127,25 @@ graph_context, graph_context_source = get_graph_context(product_id, dataframes)
 with st.sidebar:
     if st.button("Run AI diagnosis"):
         run_ai_diagnosis(product_id, risk_summary, graph_context)
+        activate_tab("AI Diagnosis")
 
     if st.button("Run simulation"):
         diagnosis = st.session_state.get("diagnosis") or {}
         candidates = diagnosis.get("action_candidates", [])
         st.session_state["simulation_df"] = run_simulations(candidates, dataframes, product_id)
+        activate_tab("Simulation")
 
     if st.button("Generate recommendation summary"):
         simulation_df = st.session_state.get("simulation_df")
         if simulation_df is None:
             st.warning("Run simulation first.")
+            activate_tab("Simulation")
         else:
             run_recommendation_summary(product_id, simulation_df)
+            activate_tab("Recommendation")
 
-tabs = st.tabs(
-    [
-        "Supply Chain Map",
-        "Data",
-        "Risk Detection",
-        "Graph Context",
-        "AI Diagnosis",
-        "Simulation",
-        "Recommendation",
-    ]
-)
+active_tab = st.session_state.get("active_tab", "Supply Chain Map")
+tabs = st.tabs(TAB_LABELS, default=active_tab, key=f"main_tabs_{active_tab}")
 
 with tabs[0]:
     st.subheader("Overall Supply Chain Network")
