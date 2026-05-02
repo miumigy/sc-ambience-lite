@@ -6,6 +6,8 @@ from typing import Any
 
 import pandas as pd
 
+from src.constants import PRODUCT_CONTEXT_MAX_HOPS
+
 
 RELATIONSHIP_PHRASES = {
     "SUPPLIES": "{source} supplies {target}",
@@ -65,7 +67,7 @@ def _build_adjacency(edges_df: pd.DataFrame) -> dict[str, list[tuple[str, int]]]
     return adjacency
 
 
-def get_subgraph_edges(edges_df: pd.DataFrame, center_node_id: str, max_hops: int = 4) -> pd.DataFrame:
+def get_subgraph_edges(edges_df: pd.DataFrame, center_node_id: str, max_hops: int = PRODUCT_CONTEXT_MAX_HOPS) -> pd.DataFrame:
     if edges_df.empty or not center_node_id:
         return edges_df.iloc[0:0].copy()
 
@@ -109,7 +111,7 @@ def build_graph_context_from_csv(
     nodes_df: pd.DataFrame,
     edges_df: pd.DataFrame,
     product_id: str,
-    max_hops: int = 4,
+    max_hops: int = PRODUCT_CONTEXT_MAX_HOPS,
 ) -> list[str]:
     subgraph_edges = get_subgraph_edges(edges_df, product_id, max_hops=max_hops)
     labels = node_label_map(nodes_df)

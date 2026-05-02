@@ -4,6 +4,8 @@ from typing import Any
 
 import pandas as pd
 
+from src.constants import PRODUCT_CONTEXT_MAX_HOPS
+
 
 ALLOWED_NODE_TYPES = {"Supplier", "Material", "Factory", "Product", "Warehouse", "Customer"}
 ALLOWED_RELATIONSHIPS = {
@@ -116,9 +118,10 @@ class Neo4jClient:
 
         self._run_with_home_database_retry(operation)
 
-    def get_product_context(self, product_id: str) -> list[str]:
-        query = """
-        MATCH path = (p:Product {id: $product_id})-[*1..4]-(n)
+    def get_product_context(self, product_id: str, max_hops: int = PRODUCT_CONTEXT_MAX_HOPS) -> list[str]:
+        safe_max_hops = max(1, min(int(max_hops), 6))
+        query = f"""
+        MATCH path = (p:Product {{id: $product_id}})-[*1..{safe_max_hops}]-(n)
         RETURN relationships(path) AS rels
         """
         context: list[str] = []

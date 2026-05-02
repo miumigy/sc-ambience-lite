@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from src.config import load_config
+from src.constants import PRODUCT_CONTEXT_MAX_HOPS
 from src.data_loader import get_product_ids, load_all_data
 from src.graph_client import Neo4jClient
 from src.graph_seed import seed_sample_graph
@@ -49,14 +50,22 @@ def get_graph_context(product_id: str, dataframes: dict[str, pd.DataFrame]) -> t
         client = get_neo4j_client()
         try:
             client.verify_connectivity()
-            context = client.get_product_context(product_id)
+            context = client.get_product_context(product_id, max_hops=PRODUCT_CONTEXT_MAX_HOPS)
             if context:
                 return context, "Neo4j"
         finally:
             client.close()
     except Exception as exc:
         st.info(f"Neo4j context retrieval skipped. CSV fallback is used. Details: {exc}")
-    return build_graph_context_from_csv(dataframes["nodes"], dataframes["edges"], product_id), "CSV fallback"
+    return (
+        build_graph_context_from_csv(
+            dataframes["nodes"],
+            dataframes["edges"],
+            product_id,
+            max_hops=PRODUCT_CONTEXT_MAX_HOPS,
+        ),
+        "CSV fallback",
+    )
 
 
 def run_ai_diagnosis(product_id: str, risk_summary: dict, graph_context: list[str]) -> None:
@@ -154,7 +163,7 @@ with tabs[0]:
     st.subheader(f"Subgraph around {product_id}")
     render_subgraph(dataframes["nodes"], dataframes["edges"], center_node_id=product_id, height=520)
 
-    sub_edges = get_subgraph_edges(dataframes["edges"], product_id, max_hops=4)
+    sub_edges = get_subgraph_edges(dataframes["edges"], product_id, max_hops=PRODUCT_CONTEXT_MAX_HOPS)
     sub_nodes = get_nodes_for_edges(dataframes["nodes"], sub_edges, extra_node_ids={product_id})
 
     col1, col2 = st.columns(2)

@@ -9,6 +9,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 import networkx as nx
 
+from src.constants import PRODUCT_CONTEXT_MAX_HOPS
 from src.utils import get_nodes_for_edges, get_subgraph_edges
 
 
@@ -39,7 +40,11 @@ def build_network_from_csv(
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     nodes = nodes_df.copy()
     edges = edges_df.copy()
-    selected_edges = get_subgraph_edges(edges, selected_product_id, max_hops=4) if selected_product_id else edges.iloc[0:0]
+    selected_edges = (
+        get_subgraph_edges(edges, selected_product_id, max_hops=PRODUCT_CONTEXT_MAX_HOPS)
+        if selected_product_id
+        else edges.iloc[0:0]
+    )
     selected_node_ids = set(selected_edges["source"].astype(str)).union(set(selected_edges["target"].astype(str)))
     if selected_product_id:
         selected_node_ids.add(selected_product_id)
@@ -52,7 +57,7 @@ def build_subgraph_from_edges(
     nodes_df: pd.DataFrame,
     edges_df: pd.DataFrame,
     center_node_id: str,
-    max_hops: int = 4,
+    max_hops: int = PRODUCT_CONTEXT_MAX_HOPS,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     sub_edges = get_subgraph_edges(edges_df, center_node_id, max_hops=max_hops)
     sub_nodes = get_nodes_for_edges(nodes_df, sub_edges, extra_node_ids={center_node_id})
@@ -248,7 +253,12 @@ def render_subgraph(
     height: int = 500,
 ) -> None:
     try:
-        sub_nodes, sub_edges = build_subgraph_from_edges(nodes_df, edges_df, center_node_id, max_hops=4)
+        sub_nodes, sub_edges = build_subgraph_from_edges(
+            nodes_df,
+            edges_df,
+            center_node_id,
+            max_hops=PRODUCT_CONTEXT_MAX_HOPS,
+        )
         sub_nodes = sub_nodes.copy()
         sub_edges = sub_edges.copy()
         sub_nodes["is_selected_context"] = True
