@@ -7,6 +7,7 @@ from tempfile import mkstemp
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
+import networkx as nx
 
 from src.utils import get_nodes_for_edges, get_subgraph_edges
 
@@ -18,6 +19,16 @@ NODE_STYLES = {
     "Product": {"color": "#fb8072", "shape": "star"},
     "Warehouse": {"color": "#80b1d3", "shape": "triangle"},
     "Customer": {"color": "#fdb462", "shape": "dot"},
+}
+
+
+TYPE_Y_POSITIONS = {
+    "Supplier": -280,
+    "Material": -150,
+    "Product": 0,
+    "Factory": 140,
+    "Warehouse": 270,
+    "Customer": 420,
 }
 
 
@@ -52,7 +63,86 @@ def _node_title(row: pd.Series) -> str:
     return f"{row.get('type', 'Node')}: {row.get('name', row.get('id', ''))}"
 
 
-def _add_nodes(network: Network, nodes_df: pd.DataFrame, selected_product_id: str | None) -> None:
+def _component_layout(nodes_df: pd.DataFrame, edges_df: pd.DataFrame) -> dict[str, dict[str, int | bool]]:
+    graph = nx.Graph()
+    graph.add_nodes_from(nodes_df["id"].astype(str).tolist())
+    graph.add_edges_from((str(row["source"]), str(row["target"])) for _, row in edges_df.iterrows())
+
+    node_type_by_id = dict(zip(nodes_df["id"].astype(str), nodes_df["type"].astype(str)))
+    product_order = {"P1": 0, "P2": 1, "P3": 2}
+    products = sorted(
+        [node_id for node_id in graph.nodes if node_type_by_id.get(node_id) == "Product"],
+        key=lambda node_id: (product_order.get(node_id, 99), node_id),
+    )
+
+    if len(products) > 1:
+        spacing = 780
+        start_x = -spacing * (len(products) - 1) / 2
+        product_centers = {product_id: start_x + index * spacing for index, product_id in enumerate(products)}
+        distances = {
+            product_id: nx.single_source_shortest_path_length(graph, product_id)
+            for product_id in products
+        }
+        product_groups: dict[tuple[str, str], list[str]] = {}
+
+        for node_id in sorted(graph.nodes):
+            nearest_product = min(
+                products,
+                key=lambda product_id: (
+                    distances[product_id].get(node_id, 999),
+                    product_order.get(product_id, 99),
+                    product_id,
+                ),
+            )
+            node_type = node_type_by_id.get(node_id, "Node")
+            product_groups.setdefault((nearest_product, node_type), []).append(node_id)
+
+        layout: dict[str, dict[str, int | bool]] = {}
+        for (product_id, node_type), node_ids in product_groups.items():
+            count = len(node_ids)
+            for index, node_id in enumerate(sorted(node_ids)):
+                x_offset = (index - (count - 1) / 2) * 150
+                y = TYPE_Y_POSITIONS.get(node_type, 0)
+                layout[node_id] = {"x": int(product_centers[product_id] + x_offset), "y": int(y), "physics": True}
+        return layout
+
+    def component_key(component: set[str]) -> tuple[int, str]:
+        products = sorted(node_id for node_id in component if node_type_by_id.get(node_id) == "Product")
+        if products:
+            return (product_order.get(products[0], 99), products[0])
+        return (99, sorted(component)[0])
+
+    components = sorted(nx.connected_components(graph), key=component_key)
+    layout: dict[str, dict[str, int | bool]] = {}
+    spacing = 700
+    start_x = -spacing * (len(components) - 1) / 2
+
+    for component_index, component in enumerate(components):
+        center_x = start_x + component_index * spacing
+        type_counts: dict[str, int] = {}
+        for node_id in sorted(component):
+            node_type = node_type_by_id.get(node_id, "Node")
+            type_counts[node_type] = type_counts.get(node_type, 0) + 1
+
+        type_seen: dict[str, int] = {}
+        for node_id in sorted(component):
+            node_type = node_type_by_id.get(node_id, "Node")
+            index = type_seen.get(node_type, 0)
+            type_seen[node_type] = index + 1
+            count = type_counts[node_type]
+            x_offset = (index - (count - 1) / 2) * 150
+            y = TYPE_Y_POSITIONS.get(node_type, 0)
+            layout[node_id] = {"x": int(center_x + x_offset), "y": int(y), "physics": True}
+
+    return layout
+
+
+def _add_nodes(
+    network: Network,
+    nodes_df: pd.DataFrame,
+    selected_product_id: str | None,
+    positions: dict[str, dict[str, int | bool]] | None = None,
+) -> None:
     for _, row in nodes_df.fillna("").iterrows():
         node_id = str(row["id"])
         node_type = str(row.get("type", "Node"))
@@ -75,6 +165,7 @@ def _add_nodes(network: Network, nodes_df: pd.DataFrame, selected_product_id: st
             size=size,
             borderWidth=border_width,
             font={"size": 18 if is_product else 14},
+            **(positions or {}).get(node_id, {}),
         )
 
 
@@ -97,14 +188,26 @@ def _render_pyvis(nodes_df: pd.DataFrame, edges_df: pd.DataFrame, selected_produ
     from pyvis.network import Network
 
     network = Network(height=f"{height}px", width="100%", directed=True, bgcolor="#ffffff", font_color="#111827")
-    network.barnes_hut(gravity=-2500, central_gravity=0.25, spring_length=150, spring_strength=0.02)
-    _add_nodes(network, nodes_df, selected_product_id)
+    network.barnes_hut(gravity=-4500, central_gravity=0.12, spring_length=190, spring_strength=0.015)
+    positions = _component_layout(nodes_df, edges_df)
+    _add_nodes(network, nodes_df, selected_product_id, positions)
     _add_edges(network, edges_df)
     network.set_options(
         """
         {
           "interaction": {"hover": true, "navigationButtons": true, "keyboard": true},
-          "physics": {"stabilization": {"iterations": 160}},
+          "layout": {"improvedLayout": false},
+          "physics": {
+            "stabilization": {"iterations": 350, "fit": true},
+            "barnesHut": {
+              "gravitationalConstant": -4500,
+              "centralGravity": 0.12,
+              "springLength": 190,
+              "springConstant": 0.015,
+              "avoidOverlap": 0.65
+            },
+            "minVelocity": 0.75
+          },
           "edges": {"smooth": {"type": "dynamic"}}
         }
         """
