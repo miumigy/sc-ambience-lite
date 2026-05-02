@@ -1,0 +1,2 @@
+from_warehouse,to_warehouse,product_id,cost_per_unit,lead_time_days,max_qty
+D2,D1,P1,1200,2,120

@@ -1,0 +1,7 @@
+streamlit
+pandas
+neo4j>=5.28,<6
+openai
+python-dotenv
+pyvis
+networkx

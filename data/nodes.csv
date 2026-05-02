@@ -1,0 +1,11 @@
+id,type,name
+S1,Supplier,Supplier S1
+M1,Material,Material M1
+M1B,Material,Alternative Material M1B
+F1,Factory,Factory F1
+F2,Factory,Factory F2
+P1,Product,Product P1
+D1,Warehouse,DC D1
+D2,Warehouse,DC D2
+C1,Customer,Customer C1
+C2,Customer,Customer C2
