@@ -1,3 +1,7 @@
 product_id,warehouse_id,safety_stock
 P1,D1,100
 P1,D2,80
+P2,D3,100
+P2,D4,120
+P3,D5,80
+P3,D6,90

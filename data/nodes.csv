@@ -1,11 +1,28 @@
 id,type,name
 S1,Supplier,Supplier S1
+S2,Supplier,Supplier S2
+S3,Supplier,Supplier S3
 M1,Material,Material M1
 M1B,Material,Alternative Material M1B
+M2,Material,Material M2
+M2B,Material,Alternative Material M2B
+M3,Material,Material M3
 F1,Factory,Factory F1
 F2,Factory,Factory F2
+F3,Factory,Factory F3
+F4,Factory,Factory F4
 P1,Product,Product P1
+P2,Product,Product P2
+P3,Product,Product P3
 D1,Warehouse,DC D1
 D2,Warehouse,DC D2
+D3,Warehouse,DC D3
+D4,Warehouse,Regional Hub D4
+D5,Warehouse,DC D5
+D6,Warehouse,Regional Hub D6
 C1,Customer,Customer C1
 C2,Customer,Customer C2
+C3,Customer,Customer C3
+C4,Customer,Customer C4
+C5,Customer,Customer C5
+C6,Customer,Customer C6

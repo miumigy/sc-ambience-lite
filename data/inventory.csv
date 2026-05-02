@@ -1,3 +1,7 @@
 product_id,warehouse_id,quantity
 P1,D1,90
 P1,D2,160
+P2,D3,180
+P2,D4,80
+P3,D5,60
+P3,D6,160

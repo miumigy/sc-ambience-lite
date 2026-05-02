@@ -1,3 +1,7 @@
 product_id,customer_id,forecast_qty
 P1,C1,120
 P1,C2,80
+P2,C3,140
+P2,C4,90
+P3,C5,70
+P3,C6,110
