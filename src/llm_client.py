@@ -53,7 +53,7 @@ class OpenRouterClient:
         parsed["raw_text"] = raw_text
         return parsed
 
-    def summarize_recommendation(self, product_id: str, simulation_results: list[dict[str, Any]]) -> str:
+    def summarize_recommendation(self, product_id: str, simulation_results: list[dict[str, Any]]) -> dict[str, Any]:
         response = self.client.chat.completions.create(
             model=self.model,
             messages=[
@@ -62,4 +62,12 @@ class OpenRouterClient:
             ],
             temperature=0.3,
         )
-        return response.choices[0].message.content or ""
+        raw_text = response.choices[0].message.content or ""
+        return {
+            "summary": raw_text,
+            "raw_text": raw_text,
+            "input_json": {
+                "product_id": product_id,
+                "simulation_results": simulation_results,
+            },
+        }

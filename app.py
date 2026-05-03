@@ -106,6 +106,12 @@ def render_ai_diagnosis_summary(diagnosis: dict) -> None:
             detail_cols[3].metric("Quantity", action.get("quantity") or 0)
 
 
+def normalize_recommendation_result(result) -> dict:
+    if isinstance(result, dict):
+        return result
+    return {"summary": result or "", "raw_text": result or "", "input_json": None}
+
+
 def get_graph_context(product_id: str, dataframes: dict[str, pd.DataFrame]) -> tuple[list[str], str]:
     try:
         client = get_neo4j_client()
@@ -280,9 +286,9 @@ with tabs[4]:
         if diagnosis.get("parse_error"):
             st.warning(f"LLM response could not be parsed as JSON: {diagnosis['parse_error']}")
         render_ai_diagnosis_summary(diagnosis)
-        st.markdown("#### Diagnosis JSON")
-        st.json({k: v for k, v in diagnosis.items() if k != "raw_text"})
-        with st.expander("Raw LLM response"):
+        with st.expander("Diagnosis JSON", expanded=False):
+            st.json({k: v for k, v in diagnosis.items() if k != "raw_text"})
+        with st.expander("Raw LLM response", expanded=False):
             st.write(diagnosis.get("raw_text", ""))
     else:
         st.info("Run AI diagnosis from the sidebar. CSV, graph, risk, and simulation features work without OpenRouter.")
@@ -315,7 +321,12 @@ with tabs[6]:
         st.dataframe(simulation_df, use_container_width=True)
     if st.session_state.get("recommendation_error"):
         st.error(st.session_state["recommendation_error"])
-    if st.session_state.get("recommendation_summary"):
-        st.markdown(st.session_state["recommendation_summary"])
+    recommendation_result = normalize_recommendation_result(st.session_state.get("recommendation_summary"))
+    if recommendation_result.get("summary"):
+        st.markdown(recommendation_result["summary"])
+        with st.expander("Recommendation input JSON", expanded=False):
+            st.json(recommendation_result.get("input_json") or {})
+        with st.expander("Raw LLM response", expanded=False):
+            st.write(recommendation_result.get("raw_text", ""))
     else:
         st.info("Generate an AI recommendation summary from the sidebar after running simulation.")
