@@ -18,9 +18,9 @@ from src.visualizer import render_network, render_subgraph
 AVAILABLE_ACTIONS = ["transfer_inventory", "prioritize_customer", "no_action"]
 TAB_LABELS = [
     "Supply Chain Map",
+    "Graph Context",
     "Data",
     "Risk Detection",
-    "Graph Context",
     "AI Diagnosis",
     "Simulation",
     "AI Recommendation",
@@ -188,10 +188,10 @@ with st.sidebar:
                 st.success("Sample graph data seeded to Neo4j.")
             finally:
                 client.close()
-            activate_tab("Supply Chain Map")
+            activate_tab("Data")
         except Exception as exc:
             st.error(f"Neo4j seed failed: {exc}")
-            activate_tab("Supply Chain Map")
+            activate_tab("Data")
 
 risk_df, risk_summary = detect_risks(product_id, dataframes)
 graph_context, graph_context_source = get_graph_context(product_id, dataframes)
@@ -243,21 +243,6 @@ with tabs[0]:
         st.dataframe(sub_edges, use_container_width=True)
 
 with tabs[1]:
-    st.subheader("Current Situation Data")
-    for name, df in dataframes.items():
-        with st.expander(name, expanded=name in {"demand", "inventory", "safety_stock"}):
-            st.dataframe(df, use_container_width=True)
-
-with tabs[2]:
-    st.subheader("Risk Detection")
-    show_product_context_badge("Current calculation", product_id, product_id)
-    st.json(risk_summary)
-    if risk_df.empty:
-        st.success("No risk detected by the current pandas rules.")
-    else:
-        st.dataframe(risk_df, use_container_width=True)
-
-with tabs[3]:
     st.subheader("Graph Context")
     show_product_context_badge("Current graph context", product_id, product_id)
     st.caption(f"Source: {graph_context_source}")
@@ -266,6 +251,21 @@ with tabs[3]:
             st.write(f"- {item}")
     else:
         st.warning("No graph context found for the selected product.")
+
+with tabs[2]:
+    st.subheader("Current Situation Data")
+    for name, df in dataframes.items():
+        with st.expander(name, expanded=True):
+            st.dataframe(df, use_container_width=True)
+
+with tabs[3]:
+    st.subheader("Risk Detection")
+    show_product_context_badge("Current calculation", product_id, product_id)
+    st.json(risk_summary)
+    if risk_df.empty:
+        st.success("No risk detected by the current pandas rules.")
+    else:
+        st.dataframe(risk_df, use_container_width=True)
 
 with tabs[4]:
     st.subheader("AI Diagnosis by OpenRouter")
