@@ -267,11 +267,12 @@ with tabs[2]:
 with tabs[3]:
     st.subheader("Risk Detection")
     show_product_context_badge("Current calculation", product_id, product_id)
-    st.json(risk_summary)
     if risk_df.empty:
         st.success("No risk detected by the current pandas rules.")
     else:
         st.dataframe(risk_df, use_container_width=True)
+    with st.expander("Risk summary JSON", expanded=False):
+        st.json(risk_summary)
 
 with tabs[4]:
     st.subheader("AI Diagnosis by OpenRouter")
