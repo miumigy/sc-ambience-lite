@@ -275,7 +275,7 @@ with tabs[3]:
         st.json(risk_summary)
 
 with tabs[4]:
-    st.subheader("AI Diagnosis by OpenRouter")
+    st.subheader("AI Diagnosis")
     show_ai_runtime_info()
     diagnosis_product_id = st.session_state.get("diagnosis_product_id")
     if diagnosis_product_id:
