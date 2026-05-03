@@ -23,7 +23,7 @@ TAB_LABELS = [
     "Graph Context",
     "AI Diagnosis",
     "Simulation",
-    "Recommendation",
+    "AI Recommendation",
 ]
 
 
@@ -53,6 +53,57 @@ def show_product_context_badge(label: str, executed_product_id: str, current_pro
             f"while the current sidebar selection is `{current_product_id}`. "
             "Run the action again to refresh it for the selected product."
         )
+
+
+def show_ai_runtime_info() -> None:
+    config = load_config()
+    st.caption(f"AI provider: OpenRouter | Model: `{config.openrouter_model}`")
+
+
+def render_ai_diagnosis_summary(diagnosis: dict) -> None:
+    st.markdown("#### Diagnosis Summary")
+    diagnosis_text = diagnosis.get("diagnosis")
+    if diagnosis_text:
+        st.write(diagnosis_text)
+
+    root_causes = diagnosis.get("root_causes") or []
+    affected_nodes = diagnosis.get("affected_nodes") or []
+    action_candidates = diagnosis.get("action_candidates") or []
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("##### Root Causes")
+        if root_causes:
+            for item in root_causes:
+                st.write(f"- {item}")
+        else:
+            st.caption("No root causes returned.")
+    with col2:
+        st.markdown("##### Affected Nodes")
+        if affected_nodes:
+            for item in affected_nodes:
+                st.write(f"- {item}")
+        else:
+            st.caption("No affected nodes returned.")
+
+    st.markdown("##### Action Candidates")
+    if not action_candidates:
+        st.caption("No action candidates returned.")
+        return
+
+    for index, action in enumerate(action_candidates, start=1):
+        title = action.get("title") or f"Candidate {index}"
+        action_type = action.get("action_type", "unknown")
+        with st.container(border=True):
+            st.markdown(f"**{index}. {title}**")
+            st.caption(f"Action type: `{action_type}`")
+            if action.get("description"):
+                st.write(action["description"])
+            detail_cols = st.columns(4)
+            detail_cols[0].metric("From", action.get("from") or "-")
+            detail_cols[1].metric("To", action.get("to") or "-")
+            detail_cols[2].metric("Product", action.get("product") or "-")
+            detail_cols[3].metric("Quantity", action.get("quantity") or 0)
 
 
 def get_graph_context(product_id: str, dataframes: dict[str, pd.DataFrame]) -> tuple[list[str], str]:
@@ -157,14 +208,14 @@ with st.sidebar:
         st.session_state["simulation_product_id"] = product_id
         activate_tab("Simulation")
 
-    if st.button("Generate recommendation summary"):
+    if st.button("Generate AI recommendation summary"):
         simulation_df = st.session_state.get("simulation_df")
         if simulation_df is None:
             st.warning("Run simulation first.")
             activate_tab("Simulation")
         else:
             run_recommendation_summary(product_id, simulation_df)
-            activate_tab("Recommendation")
+            activate_tab("AI Recommendation")
 
 active_tab = st.session_state.get("active_tab", "Supply Chain Map")
 tabs = st.tabs(TAB_LABELS, default=active_tab, key=f"main_tabs_{active_tab}")
@@ -218,6 +269,7 @@ with tabs[3]:
 
 with tabs[4]:
     st.subheader("AI Diagnosis by OpenRouter")
+    show_ai_runtime_info()
     diagnosis_product_id = st.session_state.get("diagnosis_product_id")
     if diagnosis_product_id:
         show_product_context_badge("Diagnosis result", diagnosis_product_id, product_id)
@@ -227,6 +279,8 @@ with tabs[4]:
     if diagnosis:
         if diagnosis.get("parse_error"):
             st.warning(f"LLM response could not be parsed as JSON: {diagnosis['parse_error']}")
+        render_ai_diagnosis_summary(diagnosis)
+        st.markdown("#### Diagnosis JSON")
         st.json({k: v for k, v in diagnosis.items() if k != "raw_text"})
         with st.expander("Raw LLM response"):
             st.write(diagnosis.get("raw_text", ""))
@@ -247,7 +301,8 @@ with tabs[5]:
         st.dataframe(simulation_df, use_container_width=True)
 
 with tabs[6]:
-    st.subheader("Recommendation Summary")
+    st.subheader("AI Recommendation Summary")
+    show_ai_runtime_info()
     simulation_df = st.session_state.get("simulation_df")
     recommendation_product_id = st.session_state.get("recommendation_product_id")
     simulation_product_id = st.session_state.get("simulation_product_id")
@@ -263,4 +318,4 @@ with tabs[6]:
     if st.session_state.get("recommendation_summary"):
         st.markdown(st.session_state["recommendation_summary"])
     else:
-        st.info("Generate a recommendation summary from the sidebar after running simulation.")
+        st.info("Generate an AI recommendation summary from the sidebar after running simulation.")
