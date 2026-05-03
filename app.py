@@ -308,7 +308,7 @@ with tabs[5]:
         st.dataframe(simulation_df, use_container_width=True)
 
 with tabs[6]:
-    st.subheader("AI Recommendation Summary")
+    st.subheader("AI Recommendation")
     show_ai_runtime_info()
     simulation_df = st.session_state.get("simulation_df")
     recommendation_product_id = st.session_state.get("recommendation_product_id")
