@@ -45,6 +45,16 @@ def activate_tab(tab_name: str) -> None:
         st.session_state["active_tab"] = tab_name
 
 
+def show_product_context_badge(label: str, executed_product_id: str, current_product_id: str) -> None:
+    st.caption(f"{label}: Product ID `{executed_product_id}`")
+    if executed_product_id != current_product_id:
+        st.warning(
+            f"This result was generated for `{executed_product_id}`, "
+            f"while the current sidebar selection is `{current_product_id}`. "
+            "Run the action again to refresh it for the selected product."
+        )
+
+
 def get_graph_context(product_id: str, dataframes: dict[str, pd.DataFrame]) -> tuple[list[str], str]:
     try:
         client = get_neo4j_client()
@@ -70,6 +80,7 @@ def get_graph_context(product_id: str, dataframes: dict[str, pd.DataFrame]) -> t
 
 def run_ai_diagnosis(product_id: str, risk_summary: dict, graph_context: list[str]) -> None:
     config = load_config()
+    st.session_state["diagnosis_product_id"] = product_id
     try:
         client = OpenRouterClient(config.openrouter_api_key, config.openrouter_model)
         st.session_state["diagnosis"] = client.diagnose(product_id, risk_summary, graph_context, AVAILABLE_ACTIONS)
@@ -81,6 +92,7 @@ def run_ai_diagnosis(product_id: str, risk_summary: dict, graph_context: list[st
 
 def run_recommendation_summary(product_id: str, simulation_df: pd.DataFrame) -> None:
     config = load_config()
+    st.session_state["recommendation_product_id"] = product_id
     try:
         client = OpenRouterClient(config.openrouter_api_key, config.openrouter_model)
         st.session_state["recommendation_summary"] = client.summarize_recommendation(
@@ -142,6 +154,7 @@ with st.sidebar:
         diagnosis = st.session_state.get("diagnosis") or {}
         candidates = diagnosis.get("action_candidates", [])
         st.session_state["simulation_df"] = run_simulations(candidates, dataframes, product_id)
+        st.session_state["simulation_product_id"] = product_id
         activate_tab("Simulation")
 
     if st.button("Generate recommendation summary"):
@@ -186,6 +199,7 @@ with tabs[1]:
 
 with tabs[2]:
     st.subheader("Risk Detection")
+    show_product_context_badge("Current calculation", product_id, product_id)
     st.json(risk_summary)
     if risk_df.empty:
         st.success("No risk detected by the current pandas rules.")
@@ -194,6 +208,7 @@ with tabs[2]:
 
 with tabs[3]:
     st.subheader("Graph Context")
+    show_product_context_badge("Current graph context", product_id, product_id)
     st.caption(f"Source: {graph_context_source}")
     if graph_context:
         for item in graph_context:
@@ -203,6 +218,9 @@ with tabs[3]:
 
 with tabs[4]:
     st.subheader("AI Diagnosis by OpenRouter")
+    diagnosis_product_id = st.session_state.get("diagnosis_product_id")
+    if diagnosis_product_id:
+        show_product_context_badge("Diagnosis result", diagnosis_product_id, product_id)
     if st.session_state.get("diagnosis_error"):
         st.error(st.session_state["diagnosis_error"])
     diagnosis = st.session_state.get("diagnosis")
@@ -218,16 +236,25 @@ with tabs[4]:
 with tabs[5]:
     st.subheader("Simulation")
     simulation_df = st.session_state.get("simulation_df")
+    simulation_product_id = st.session_state.get("simulation_product_id")
     if simulation_df is None:
+        show_product_context_badge("Preview calculation", product_id, product_id)
         st.info("Run simulation from the sidebar. Without AI candidates, the app still evaluates no_action.")
         preview_df = run_simulations([], dataframes, product_id)
         st.dataframe(preview_df, use_container_width=True)
     else:
+        show_product_context_badge("Simulation result", simulation_product_id or product_id, product_id)
         st.dataframe(simulation_df, use_container_width=True)
 
 with tabs[6]:
     st.subheader("Recommendation Summary")
     simulation_df = st.session_state.get("simulation_df")
+    recommendation_product_id = st.session_state.get("recommendation_product_id")
+    simulation_product_id = st.session_state.get("simulation_product_id")
+    if recommendation_product_id:
+        show_product_context_badge("Recommendation result", recommendation_product_id, product_id)
+    elif simulation_product_id:
+        show_product_context_badge("Simulation result shown below", simulation_product_id, product_id)
     if simulation_df is not None:
         st.markdown("#### Simulation Results")
         st.dataframe(simulation_df, use_container_width=True)
