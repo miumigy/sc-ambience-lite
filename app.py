@@ -289,7 +289,7 @@ with tabs[4]:
         with st.expander("Diagnosis JSON", expanded=False):
             st.json({k: v for k, v in diagnosis.items() if k != "raw_text"})
         with st.expander("Raw LLM response", expanded=False):
-            st.write(diagnosis.get("raw_text", ""))
+            st.code(diagnosis.get("raw_text", ""), language="text")
     else:
         st.info("Run AI diagnosis from the sidebar. CSV, graph, risk, and simulation features work without OpenRouter.")
 
@@ -327,6 +327,6 @@ with tabs[6]:
         with st.expander("Recommendation input JSON", expanded=False):
             st.json(recommendation_result.get("input_json") or {})
         with st.expander("Raw LLM response", expanded=False):
-            st.write(recommendation_result.get("raw_text", ""))
+            st.code(recommendation_result.get("raw_text", ""), language="text")
     else:
         st.info("Generate an AI recommendation summary from the sidebar after running simulation.")
